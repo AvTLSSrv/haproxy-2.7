@@ -1010,7 +1010,29 @@ src/haproxy.o:	src/haproxy.c $(DEP)
 	      -DBUILD_DEBUG='"$(strip $(DEBUG))"' \
 	      -DBUILD_FEATURES='"$(strip $(BUILD_FEATURES))"' \
 	       -c -o $@ $<
+EXCLUDE_ERRORSHTML = type
+ERRORSHTML = $(filter-out $(EXCLUDE_ERRORSHTML),$(patsubst appendix/errors/%.http,%,$(wildcard appendix/errors/*.http)))
 
+EXCLUDE_EXAMPLESCFG = type
+EXAMPLESCFG = $(filter-out $(EXCLUDE_EXAMPLESCFG),$(patsubst appendix/examples/%.cfg,%,$(wildcard appendix/examples/*.cfg)))
+
+install-appendix:
+	$(Q)install -v -m 644 appendix/haproxy.cfg "$(DESTDIR)$(PREFIX)"
+	$(Q)install -v -d "$(DESTDIR)$(PREFIX)"/run
+	$(Q)install -v -d "$(DESTDIR)$(PREFIX)"/errors
+	$(Q)for x in $(ERRORSHTML); do \
+		install -v -m 644 appendix/errors/$$x.http "$(DESTDIR)$(PREFIX)"/errors ; \
+	done
+	$(Q)install -v -d "$(DESTDIR)$(PREFIX)"/service
+	$(Q)install -v -d "$(DESTDIR)$(PREFIX)"/service/etc
+	$(Q)install -v -d "$(DESTDIR)$(PREFIX)"/service/etc/systemd
+	$(Q)install -v -d "$(DESTDIR)$(PREFIX)"/service/lib/systemd/system
+	$(Q)install -v -m 644 appendix/service/etc/systemd/system/haproxy.service "$(DESTDIR)$(PREFIX)"/service/etc/systemd/system
+	$(Q)install -v -d "$(DESTDIR)$(PREFIX)"/examples
+	$(Q)for x in $(EXAMPLESCFG); do \
+		install -v -m 644 appendix/examples/$$x.cfg "$(DESTDIR)$(PREFIX)"/examples ; \
+	done
+	 
 install-man:
 	$(Q)$(INSTALL) -d "$(DESTDIR)$(MANDIR)"/man1
 	$(Q)$(INSTALL) -m 644 doc/haproxy.1 "$(DESTDIR)$(MANDIR)"/man1
@@ -1034,7 +1056,15 @@ install-bin:
 	$(Q)$(INSTALL) -d "$(DESTDIR)$(SBINDIR)"
 	$(Q)$(INSTALL) haproxy $(EXTRA) "$(DESTDIR)$(SBINDIR)"
 
-install: install-bin install-man install-doc
+#install: install-bin install-man install-doc
+install: install-bin install-man install-doc install-appendix
+
+uninstall-appendix:
+	$(Q)rm -f "$(DESTDIR)$(PREFIX)"/haproxy.cfg
+	$(Q)rm -r "$(DESTDIR)$(PREFIX)"/run
+	$(Q)rm -r "$(DESTDIR)$(PREFIX)"/errors
+	$(Q)rm -r "$(DESTDIR)$(PREFIX)"/service
+	$(Q)rm -r "$(DESTDIR)$(PREFIX)"/examples
 
 uninstall:
 	$(Q)rm -f "$(DESTDIR)$(MANDIR)"/man1/haproxy.1
@@ -1043,7 +1073,8 @@ uninstall:
 	done
 	$(Q)-rmdir "$(DESTDIR)$(DOCDIR)"
 	$(Q)rm -f "$(DESTDIR)$(SBINDIR)"/haproxy
-
+	uninstall-appendix
+	
 clean:
 	$(Q)rm -f *.[oas] src/*.[oas] haproxy test .build_opts .build_opts.new
 	$(Q)for dir in . src dev/* admin/* addons/* include/* doc; do rm -f $$dir/*~ $$dir/*.rej $$dir/core; done
